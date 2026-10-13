@@ -1,0 +1,121 @@
+---
+title: "case_study"
+author: "Julian Morales"
+date: "2026-10-13"
+output: html_document
+---
+```{r}
+library(p8105.datasets)
+library(tidyverse)
+library(leaflet)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+data(nyc_airbnb)
+```
+
+```{r}
+str(nyc_airbnb)
+
+nyc_airbnb |> 
+  count(room_type)
+
+nyc_airbnb %>%
+  count(neighbourhood_group)
+```
+
+Answering Questions
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group =="Manhattan") |> 
+  count(room_type, neighbourhood) |> 
+  pivot_wider(
+    names_from = room_type,
+    values_from = n
+  )
+```
+
+## price
+```{r}
+nyc_airbnb |> 
+  mutate(price_rank = min_rank(desc(price))) |> 
+  filter(price_rank < 3) |> view()
+```
+
+```{r}
+nyc_airbnb |> 
+  group_by(neighbourhood_group) |> 
+  mutate(price_rank = min_rank(desc(price))) |> 
+  filter(price_rank < 2)
+```
+
+```{r}
+nyc_airbnb |> 
+  filter(price<1000) |> 
+  ggplot(aes(x=price))+
+  geom_histogram()+
+  facet_grid(room_type - neighbourhood_group)
+```
+
+prices on average
+```{r}
+nyc_airbnb |> 
+  group_by(room_type, neighbourhood_group) |> 
+  summarize(
+    mean_price = mean(price)
+  ) |> 
+  pivot_wider(
+    names_from = room_type,
+    values_from = mean_price
+  )
+```
+
+## same host stuff
+
+```{r}
+nyc_airbnb |> 
+  filter(calculated_host_listings_count > 10)
+```
+
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group == "Manhattan") |>
+  filter(price < 500) |> 
+  mutate(neighbourhood = fct_reorder(neighbourhood, price)) |> 
+  ggplot(aes(x=neighbourhood, y = price))+
+  geom_boxplot()+
+  facet_grid(.~ room_type)+
+  theme(axis.test.x = element_text(angle = 90,hjust = 1))
+```
+
+## visualize price some more
+```{r}
+nyc_airbnb |> 
+  filter(neighbourhood_group == "Manhattan") |> 
+  filter(room_type == "Entire home/apt") |> 
+  filter(price < 500) |> 
+  ggplot(aes(x = lat, y = long, color = price))+
+  geom_point(alpha = .5)
+```
+
+make a leaflet map
+
+```{r}
+pal = colorNumeric(
+  palette = "viridis"
+)
+
+nyc_airbnb |> 
+  filter(neighbourhood_group == "Manhattan") |> 
+  filter(room_type == "Entire home/apt") |> 
+  filter(price < 500) |> 
+ # sample(50) |> 
+  leaflet() |> 
+  addTiles() |> 
+  addMarkers(~long, ~lat)
+```
+
